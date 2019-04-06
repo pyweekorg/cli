@@ -100,10 +100,16 @@ def download(challenge, directory):
             name = f['name']
             url = f['url']
             target = entry_dir / name
-            download(url, target)
+            download_file(url, target)
+    click.echo(
+        click.style(
+            "All files downloaded successfully.",
+            fg='green'
+        )
+    )
 
 
-def download(url, target):
+def download_file(url, target):
     """Download the given file."""
 
     resp = sess.get(url, stream=True)
@@ -113,7 +119,7 @@ def download(url, target):
 
     length = int(resp.headers['Content-Length'])
 
-    widgets = [target.name, *PROGRESSBAR_WIDGETS]
+    widgets = [target.name, ' ', *PROGRESSBAR_WIDGETS]
     with progressbar.ProgressBar(widgets=widgets, max_value=length) as bar, \
             target.open('wb') as out:
         for chunk in resp.iter_content(10240):
