@@ -14,16 +14,16 @@ import click
 import progressbar
 
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'
 PYWEEK_URL = 'https://pyweek.org'
 CLI_PYPI_URL = 'https://pypi.org/pypi/pyweek/json'
 
 
 PROGRESSBAR_WIDGETS = [
     progressbar.Percentage(),
-    ' ', progressbar.Bar(marker=progressbar.RotatingMarker()),
+    ' ', progressbar.Bar(marker='\u2588'),
     ' ', progressbar.ETA(),
-    ' ', progressbar.FileTransferSpeed(),
+    ' ', progressbar.DataSize(),
 ]
 
 
@@ -81,32 +81,49 @@ def download(challenge, directory):
     if not directory:
         directory = Path.cwd() / str(challenge)
 
-    if directory.exists():
-        raise click.ClickException(
-            f"Target directory {directory} exists!"
-        )
-
-    directory.mkdir(parents=True)
+    directory.mkdir(parents=True, exist_ok=True)
 
     resp = sess.get(f'{PYWEEK_URL}/{challenge}/downloads.json')
     resp.raise_for_status()
     downloads = resp.json()
 
+    errors = 0
     for name, files in downloads.items():
         entry_dir = directory / sanitise_name(name)
-        entry_dir.mkdir()
+        entry_dir.mkdir(exist_ok=True)
 
         for f in files:
             name = f['name']
             url = f['url']
+            size = f['size']
             target = entry_dir / name
-            download_file(url, target)
-    click.echo(
-        click.style(
-            "All files downloaded successfully.",
-            fg='green'
+            try:
+                st = target.stat()
+            except FileNotFoundError:
+                pass
+            else:
+                if st.st_size == size:
+                    # Already downloaded, skip
+                    continue
+
+            res = download_file(url, target)
+            if not res:
+                errors += 1
+
+    if errors:
+        click.echo(
+            click.style(
+                f"{errors} errors occurred while downloading files.",
+                fg='red'
+            )
         )
-    )
+    else:
+        click.echo(
+            click.style(
+                "All files downloaded successfully.",
+                fg='green'
+            )
+        )
 
 
 def download_file(url, target):
@@ -114,19 +131,26 @@ def download_file(url, target):
 
     resp = sess.get(url, stream=True)
     if resp.status_code != 200:
-        print(f"Warning: error downloading {url}")
+        click.echo(
+            click.style(
+                f"Warning: error downloading {url}",
+                fg='red'
+            )
+        )
         return False
 
     length = int(resp.headers['Content-Length'])
 
-    widgets = [target.name, ' ', *PROGRESSBAR_WIDGETS]
+    click.echo(
+        "Downloading " + click.style(target.name, fg='cyan')
+    )
+    widgets = PROGRESSBAR_WIDGETS
     with progressbar.ProgressBar(widgets=widgets, max_value=length) as bar, \
             target.open('wb') as out:
         for chunk in resp.iter_content(10240):
             out.write(chunk)
             bar.update(out.tell())
             time.sleep(0.2)  # throttle to about 50KB/s
-    print(f"Downloaded {target}")
     return True
 
 
