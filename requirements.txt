@@ -1,3 +1,5 @@
 click
 requests
 progressbar2
+packaging
+colorama

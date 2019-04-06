@@ -3,16 +3,21 @@
 Currently just a command for downloading the entries.
 
 """
+import sys
 import re
 from pathlib import Path
 import time
+from packaging import version
 
 import requests
 import click
 import progressbar
 
 
+__version__ = '0.1.0'
 PYWEEK_URL = 'https://pyweek.org'
+CLI_PYPI_URL = 'https://pypi.org/pypi/pyweek/json'
+
 
 PROGRESSBAR_WIDGETS = [
     progressbar.Percentage(),
@@ -25,9 +30,29 @@ PROGRESSBAR_WIDGETS = [
 sess = requests.Session()
 
 
+def version_check():
+    """Check that this CLI is up-to-date."""
+    resp = sess.get(CLI_PYPI_URL)
+    resp.raise_for_status()
+    pkginfo = resp.json()
+    v = version.parse(pkginfo['info']['version'])
+    this_version = version.parse(__version__)
+    if v > this_version:
+        click.echo(
+            click.style(
+                f"There is a newer version {v} of this tool on PyPI. "
+                "Please update before continuing:\n\n"
+                "    pip install --upgrade pyweek",
+                fg='red'
+            )
+        )
+        sys.exit(1)
+
+
 @click.group()
 def cli():
     """Command line interface to PyWeek."""
+    version_check()
 
 
 def sanitise_name(name):
