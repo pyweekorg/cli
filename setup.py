@@ -1,12 +1,22 @@
 from setuptools import setup
+import re
 
-import pyweek
+
+def find_version():
+    """Extract the version number from the CLI source file."""
+    with open('pyweek.py') as f:
+        for l in f:
+            mo = re.match('__version__ = *(.*)?\s*', l)
+            if mo:
+                return eval(mo.group(1))
+        else:
+            raise Exception("No version information found.")
 
 
 setup(
     name='pyweek',
     description="CLI for Pyweek.",
-    version=pyweek.__version__,
+    version=find_version(),
     author='Daniel Pope',
     author_email='mauve@mauveweb.co.uk',
     long_description=open('README.md').read(),

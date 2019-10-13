@@ -4,6 +4,7 @@ Currently just a command for downloading the entries.
 
 """
 import sys
+import os
 import re
 from pathlib import Path
 import time
@@ -14,7 +15,7 @@ import click
 import progressbar
 
 
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 PYWEEK_URL = 'https://pyweek.org'
 CLI_PYPI_URL = 'https://pypi.org/pypi/pyweek/json'
 
@@ -106,7 +107,7 @@ def download(challenge, directory):
                     # Already downloaded, skip
                     continue
 
-            res = download_file(url, target)
+            res = download_file(url, target, size)
             if not res:
                 errors += 1
 
@@ -126,11 +127,22 @@ def download(challenge, directory):
         )
 
 
-def download_file(url, target):
-    """Download the given file."""
+CHUNK_SIZE = 10240
 
-    resp = sess.get(url, stream=True)
-    if resp.status_code != 200:
+
+def download_file(url, target, size, rate_limit=50):
+    """Download the given file.
+
+    Throttle to about the given rate in KB/s.
+
+    """
+    headers = {}
+    if target.exists():
+        start = target.stat().st_size
+        headers['Range'] = f'bytes={start}-{size}'
+
+    resp = sess.get(url, stream=True, headers=headers)
+    if resp.status_code not in (200, 206):
         click.echo(
             click.style(
                 f"Warning: error downloading {url}",
@@ -141,16 +153,28 @@ def download_file(url, target):
 
     length = int(resp.headers['Content-Length'])
 
-    click.echo(
-        "Downloading " + click.style(target.name, fg='cyan')
-    )
+    name = f'{target.parent.name}{os.sep}{target.name}'
+
+    if resp.status_code == 206:
+        click.echo(
+            "Resuming " + click.style(name, fg='cyan')
+        )
+        mode = 'ab'
+    else:
+        click.echo(
+            "Downloading " + click.style(name, fg='cyan')
+        )
+        mode = 'wb'
+
     widgets = PROGRESSBAR_WIDGETS
-    with progressbar.ProgressBar(widgets=widgets, max_value=length) as bar, \
-            target.open('wb') as out:
+    with progressbar.ProgressBar(widgets=widgets, max_value=size) as bar, \
+            target.open(mode) as out:
         for chunk in resp.iter_content(10240):
+            assert isinstance(chunk, bytes)
             out.write(chunk)
+            delay = len(chunk) / (rate_limit * 1024)
             bar.update(out.tell())
-            time.sleep(0.2)  # throttle to about 50KB/s
+            time.sleep(delay)
     return True
 
 
