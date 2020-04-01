@@ -15,7 +15,7 @@ import click
 import progressbar
 
 
-__version__ = '0.4.0'
+__version__ = '0.5.0'
 PYWEEK_URL = 'https://pyweek.org'
 CLI_PYPI_URL = 'https://pypi.org/pypi/pyweek/json'
 
@@ -130,7 +130,7 @@ def download(challenge, directory):
 CHUNK_SIZE = 10240
 
 
-def download_file(url, target, size, rate_limit=50):
+def download_file(url, target, size):
     """Download the given file.
 
     Throttle to about the given rate in KB/s.
@@ -169,12 +169,10 @@ def download_file(url, target, size, rate_limit=50):
     widgets = PROGRESSBAR_WIDGETS
     with progressbar.ProgressBar(widgets=widgets, max_value=size) as bar, \
             target.open(mode) as out:
-        for chunk in resp.iter_content(10240):
+        for chunk in resp.iter_content(102400):
             assert isinstance(chunk, bytes)
             out.write(chunk)
-            delay = len(chunk) / (rate_limit * 1024)
             bar.update(out.tell())
-            time.sleep(delay)
     return True
 
 
