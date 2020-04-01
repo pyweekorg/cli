@@ -5,14 +5,16 @@ Command line interface for pyweek.org.
 
 So far, the only feature is downloading entries:
 
-    pyweek download 28
+    pyweek download 29
 
 
-This downloads into a new directory `28` inside the current directory.
+This downloads into a new directory `29` inside the current directory.
 
 
 ## History
 
+* 0.5.1 - Fix: downloading .tar.gz files from S3 decompresses them and
+  then crashes
 * 0.5.0 - remove rate limits, as the server's download bandwidth is no longer
   constrained
 * 0.4.0 - resume partial downloads

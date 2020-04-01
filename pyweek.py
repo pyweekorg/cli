@@ -15,7 +15,7 @@ import click
 import progressbar
 
 
-__version__ = '0.5.0'
+__version__ = '0.5.1'
 PYWEEK_URL = 'https://pyweek.org'
 CLI_PYPI_URL = 'https://pypi.org/pypi/pyweek/json'
 
@@ -33,6 +33,8 @@ sess = requests.Session()
 
 def version_check():
     """Check that this CLI is up-to-date."""
+    if os.environ.get('PYWEEK_SKIP_VERSION_CHECK') is not None:
+        return
     resp = sess.get(CLI_PYPI_URL)
     resp.raise_for_status()
     pkginfo = resp.json()
@@ -139,7 +141,12 @@ def download_file(url, target, size):
     headers = {}
     if target.exists():
         start = target.stat().st_size
-        headers['Range'] = f'bytes={start}-{size}'
+        if start < size:
+            headers['Range'] = f'bytes={start}-{size}'
+        else:
+            start = 0
+    else:
+        start = 0
 
     resp = sess.get(url, stream=True, headers=headers)
     if resp.status_code not in (200, 206):
@@ -152,6 +159,8 @@ def download_file(url, target, size):
         return False
 
     length = int(resp.headers['Content-Length'])
+    assert length == size - start, \
+        f"Invalid length {length}, expected {size - start}"
 
     name = f'{target.parent.name}{os.sep}{target.name}'
 
@@ -169,10 +178,19 @@ def download_file(url, target, size):
     widgets = PROGRESSBAR_WIDGETS
     with progressbar.ProgressBar(widgets=widgets, max_value=size) as bar, \
             target.open(mode) as out:
-        for chunk in resp.iter_content(102400):
+        while True:
+            # We read chunks of 100KiB at a time. We cannot use
+            # resp.iter_content() because this is not raw enough; it will
+            # decode Content-Encoding: gzip for us, which means we would be
+            # writing .tar data for a .tar.gz download from S3.
+            chunk = resp.raw.read(102400)
+            if not chunk:
+                break
             assert isinstance(chunk, bytes)
             out.write(chunk)
             bar.update(out.tell())
+        assert out.tell() == size, \
+            f"Incorrect size written, expected {size}, wrote {out.tell()}"
     return True
 
 
