@@ -15,7 +15,7 @@ import click
 import progressbar
 
 
-__version__ = '0.5.1'
+__version__ = '0.5.2'
 PYWEEK_URL = 'https://pyweek.org'
 CLI_PYPI_URL = 'https://pypi.org/pypi/pyweek/json'
 
