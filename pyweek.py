@@ -29,6 +29,7 @@ PROGRESSBAR_WIDGETS = [
 
 
 sess = requests.Session()
+sess.verify = False
 
 
 def version_check():
