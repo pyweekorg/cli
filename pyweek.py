@@ -15,7 +15,7 @@ import click
 import progressbar
 
 
-__version__ = '0.5.2'
+__version__ = '0.5.3'
 PYWEEK_URL = 'https://pyweek.org'
 CLI_PYPI_URL = 'https://pypi.org/pypi/pyweek/json'
 
@@ -29,7 +29,6 @@ PROGRESSBAR_WIDGETS = [
 
 
 sess = requests.Session()
-sess.verify = False
 
 
 def version_check():

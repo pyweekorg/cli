@@ -13,6 +13,7 @@ This downloads into a new directory `29` inside the current directory.
 
 ## History
 
+* 0.5.3 - Revert certificate verification
 * 0.5.2 - Disable certificate verification (temporary)
 * 0.5.1 - Fix: downloading .tar.gz files from S3 decompresses them and
   then crashes
