@@ -25,6 +25,7 @@ PROGRESSBAR_WIDGETS = [
     ' ', progressbar.Bar(marker='\u2588'),
     ' ', progressbar.ETA(),
     ' ', progressbar.DataSize(),
+    ' ', progressbar.FileTransferSpeed(),
 ]
 
 
