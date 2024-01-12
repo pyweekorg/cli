@@ -133,19 +133,27 @@ def download(challenge, directory):
     type=Path,
 )
 def verify(file: Path):
-    """
-    Determines if a given zip file is in the proper format.
-    """
+    """Determines if a given zip file is in the proper format."""
 
     errors = 0
 
+    def error(msg, critical=False):
+        """"""
+
+        nonlocal errors
+
+        if errors:
+            click.echo()
+        errors += 1
+        click.echo(click.style(msg, fg='red'))
+        if critical:
+            sys.exit(1)
+
     if not file.exists():
-        error(f"File {file} does not exist.")
-        sys.exit()
+        error(f"File {file} does not exist.", True)
 
     if not file.suffix == '.zip':
-        error(f"File is not a zip file.", errors)
-        errors += 1
+        error(f"File is not a zip file.", True)
 
     # Check that the file name follows the proper naming convention
     pattern = re.compile(r'^[A-Za-z0-9-]+-[0-9]+\.[0-9]+(\.[0-9]+)?\.zip$')
@@ -153,18 +161,15 @@ def verify(file: Path):
     if not match:
         error(f"""File does not follow the proper naming convention.
     The file name should be in the format: {{Name-of-Entry}}-{{major.minor}}.zip
-    Example: "My-Game-1.0.zip" or "my-game-1.0.1.zip\"""", errors)
-        errors += 1
+    Example: "My-Game-1.0.zip" or "my-game-1.0.1.zip\"""")
 
     # Open the zip file
     try:
         zipped_file = zipfile.ZipFile(file)
     except zipfile.BadZipFile:
-        error(f"File is not a valid zip file.", errors)
-        sys.exit(1)
+        error(f"File is not a valid zip file.", True)
     except IsADirectoryError:
-        error(f"File is a directory.", errors)
-        sys.exit(1)
+        error(f"File is a directory.", True)
 
     # Check that the zip file contains a single top-level directory
     # This directory should be named the same as the zip file
@@ -175,14 +180,12 @@ def verify(file: Path):
             top_level_dirs.append(name)
 
     if len(top_level_dirs) != 1:
-        error(f"File contains multiple top-level directories.", errors)
-        errors += 1
+        error(f"File contains multiple top-level directories.")
     else:
         # Check that the top-level directory is named the same as the zip file
         if top_level_dirs[0] != file.stem:
             error(f"""File contains a top-level directory named "{top_level_dirs[0]}".
-    This directory should be named "{file.stem}/".""", errors)
-            errors += 1
+    This directory should be named "{file.stem}/".""")
 
         # Check that the top-level dir contains the needed files (run_game.py, requirements.txt, README.(md|txt))
         files_in_top_level_dir = []
@@ -192,46 +195,18 @@ def verify(file: Path):
                 files_in_top_level_dir.append(n)
 
         if 'run_game.py' not in files_in_top_level_dir:
-            error(f"""File does not contain a "run_game.py" file.""", errors)
-            errors += 1
+            error(f"""File does not contain a "run_game.py" file.""")
 
         if 'requirements.txt' not in files_in_top_level_dir:
-            error(f"""File does not contain a "requirements.txt" file.""", errors)
-            errors += 1
+            error(f"""File does not contain a "requirements.txt" file.""")
 
         if 'README.md' not in files_in_top_level_dir and 'README.txt' not in files_in_top_level_dir:
-            error(f"""File does not contain a "README.md" or "README.txt" file.""", errors)
-            errors += 1
+            error(f"""File does not contain a "README.md" or "README.txt" file.""")
 
     if errors:
-        click.echo()
-        click.echo(
-            click.style(
-                f"{errors} error{"s" if errors > 1 else ""} occurred while verifying file {file}.",
-                fg='red'
-            )
-        )
-
+        error(f"{errors} error{"s" if errors > 1 else ""} occurred while verifying file {file}.")
     else:
-        click.echo(
-            click.style(
-                f"File {file} is valid.",
-                fg='green'
-            )
-        )
-
-
-def error(msg, errors=0):
-    """Print an error message and exit."""
-
-    if errors:
-        click.echo()
-    click.echo(
-        click.style(
-            msg,
-            fg='red'
-        )
-    )
+        click.echo(click.style(f"File {file} is valid.", fg='green'))
 
 
 CHUNK_SIZE = 10240
