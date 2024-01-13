@@ -153,55 +153,57 @@ def verify(file: Path):
         error(f"File {file} does not exist.", True)
 
     if not file.suffix == '.zip':
-        error(f"File is not a zip file.", True)
+        error("File is not a zip file.", True)
 
     # Check that the file name follows the proper naming convention
     pattern = re.compile(r'^[A-Za-z0-9-]+-[0-9]+\.[0-9]+(\.[0-9]+)?\.zip$')
     match = pattern.match(file.name)
     if not match:
-        error(f"""File does not follow the proper naming convention.
+        error("""File does not follow the proper naming convention.
     The file name should be in the format: {{Name-of-Entry}}-{{major.minor}}.zip
     Example: "My-Game-1.0.zip" or "my-game-1.0.1.zip\"""")
 
     # Open the zip file
+    zipped_file = None
     try:
         zipped_file = zipfile.ZipFile(file)
     except zipfile.BadZipFile:
-        error(f"File is not a valid zip file.", True)
+        error("File is not a valid zip file.", True)
     except IsADirectoryError:
-        error(f"File is a directory.", True)
+        error("File is a directory.", True)
 
     # Check that the zip file contains a single top-level directory
     # This directory should be named the same as the zip file
-    top_level_dirs = []
-    for name in zipped_file.namelist():
-        name = name.split('/')[0]
-        if name not in top_level_dirs:
-            top_level_dirs.append(name)
+    top_level_dirs = {
+        name.split('/')[0]
+        for name in zipped_file.namelist()
+    }
 
     if len(top_level_dirs) != 1:
-        error(f"File contains multiple top-level directories.")
+        error("File contains multiple top-level directories.")
     else:
         # Check that the top-level directory is named the same as the zip file
-        if top_level_dirs[0] != file.stem:
-            error(f"""File contains a top-level directory named "{top_level_dirs[0]}".
+        dir_name = top_level_dirs.pop()
+        if dir_name != file.stem:
+            error(f"""File contains a top-level directory named "{dir_name}".
     This directory should be named "{file.stem}/".""")
 
-        # Check that the top-level dir contains the needed files (run_game.py, requirements.txt, README.(md|txt))
-        files_in_top_level_dir = []
-        for name in zipped_file.namelist():
-            n = name.split('/')[1]
-            if n not in files_in_top_level_dir and name.count('/') == 1 and n:
-                files_in_top_level_dir.append(n)
+        # Check that the top-level dir contains the needed files (run_game.py, requirements.txt, README.md)
+        files_in_top_level_dir = {
+            name.split('/')[1]
+            for name in zipped_file.namelist()
+            if name.startswith(dir_name + '/')
+        }
 
-        if 'run_game.py' not in files_in_top_level_dir:
-            error(f"""File does not contain a "run_game.py" file.""")
-
-        if 'requirements.txt' not in files_in_top_level_dir:
-            error(f"""File does not contain a "requirements.txt" file.""")
-
-        if 'README.md' not in files_in_top_level_dir and 'README.txt' not in files_in_top_level_dir:
-            error(f"""File does not contain a "README.md" or "README.txt" file.""")
+        needed_files = {
+            "run_game.py": "This file should be the entry point for your game. Running it should start your game.",
+            "requirements.txt": "This file should contain a list of dependencies. Create it by running \"pip freeze > requirements.txt\".",
+            "README.md": "This file should contain a description of your game and the controls."
+        }
+        for file_name, reason in needed_files.items():
+            if file_name not in files_in_top_level_dir:
+                error(f"""File is missing "{file_name}".
+    {reason}""")
 
     if errors:
         error(f"{errors} error{"s" if errors > 1 else ""} occurred while verifying file {file}.")
