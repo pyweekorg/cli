@@ -1,7 +1,6 @@
 """A command line interface to PyWeek.
 
-Currently just a command for downloading the entries.
-
+Download and verify entries for a given challenge:
 """
 import sys
 import os
@@ -9,16 +8,15 @@ import re
 from pathlib import Path
 import time
 from packaging import version
+import zipfile
 
 import requests
 import click
 import progressbar
 
-
 __version__ = '0.5.3'
 PYWEEK_URL = 'https://pyweek.org'
 CLI_PYPI_URL = 'https://pypi.org/pypi/pyweek/json'
-
 
 PROGRESSBAR_WIDGETS = [
     progressbar.Percentage(),
@@ -27,7 +25,6 @@ PROGRESSBAR_WIDGETS = [
     ' ', progressbar.DataSize(),
     ' ', progressbar.FileTransferSpeed(),
 ]
-
 
 sess = requests.Session()
 
@@ -78,7 +75,7 @@ def sanitise_name(name):
 )
 @click.argument(
     'challenge',
-#    help="The challenge number to download entries for."
+    #    help="The challenge number to download entries for."
 )
 def download(challenge, directory):
     """Download all Pyweek entries for a competition."""
@@ -130,6 +127,90 @@ def download(challenge, directory):
         )
 
 
+@cli.command()
+@click.argument(
+    'file',
+    type=Path,
+)
+def verify(file: Path):
+    """Determines if a given zip file is in the proper format."""
+
+    errors = 0
+
+    def error(msg, critical=False):
+        """"""
+
+        nonlocal errors
+
+        if errors:
+            click.echo()
+        errors += 1
+        click.echo(click.style(msg, fg='red'))
+        if critical:
+            sys.exit(1)
+
+    if not file.exists():
+        error(f"File {file} does not exist.", True)
+
+    if not file.suffix == '.zip':
+        error("File is not a zip file.", True)
+
+    # Check that the file name follows the proper naming convention
+    pattern = re.compile(r'^[A-Za-z0-9-]+-[0-9]+\.[0-9]+(\.[0-9]+)?\.zip$')
+    match = pattern.match(file.name)
+    if not match:
+        error("""File does not follow the proper naming convention.
+    The file name should be in the format: {{Name-of-Entry}}-{{major.minor}}.zip
+    Example: "My-Game-1.0.zip" or "my-game-1.0.1.zip\"""")
+
+    # Open the zip file
+    zipped_file = None
+    try:
+        zipped_file = zipfile.ZipFile(file)
+    except zipfile.BadZipFile:
+        error("File is not a valid zip file.", True)
+    except IsADirectoryError:
+        error("File is a directory.", True)
+
+    # Check that the zip file contains a single top-level directory
+    # This directory should be named the same as the zip file
+    top_level_dirs = {
+        name.split('/')[0]
+        for name in zipped_file.namelist()
+    }
+
+    if len(top_level_dirs) != 1:
+        error("File contains multiple top-level directories.")
+    else:
+        # Check that the top-level directory is named the same as the zip file
+        dir_name = top_level_dirs.pop()
+        if dir_name != file.stem:
+            error(f"""File contains a top-level directory named "{dir_name}".
+    This directory should be named "{file.stem}/".""")
+
+        # Check that the top-level dir contains the needed files (run_game.py, requirements.txt, README.md)
+        files_in_top_level_dir = {
+            name.split('/')[1]
+            for name in zipped_file.namelist()
+            if name.startswith(dir_name + '/')
+        }
+
+        needed_files = {
+            "run_game.py": "This file should be the entry point for your game. Running it should start your game.",
+            "requirements.txt": "This file should contain a list of dependencies. Create it by running \"pip freeze > requirements.txt\".",
+            "README.md": "This file should contain a description of your game and the controls."
+        }
+        for file_name, reason in needed_files.items():
+            if file_name not in files_in_top_level_dir:
+                error(f"""File is missing "{file_name}".
+    {reason}""")
+
+    if errors:
+        error(f"{errors} error{"s" if errors > 1 else ""} occurred while verifying file {file}.")
+    else:
+        click.echo(click.style(f"File {file} is valid.", fg='green'))
+
+
 CHUNK_SIZE = 10240
 
 
@@ -178,7 +259,7 @@ def download_file(url, target, size):
 
     widgets = PROGRESSBAR_WIDGETS
     with progressbar.ProgressBar(widgets=widgets, max_value=size) as bar, \
-            target.open(mode) as out:
+        target.open(mode) as out:
         while True:
             # We read chunks of 100KiB at a time. We cannot use
             # resp.iter_content() because this is not raw enough; it will
