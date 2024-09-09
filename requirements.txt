@@ -3,3 +3,4 @@ requests
 progressbar2
 packaging
 colorama
+rich
