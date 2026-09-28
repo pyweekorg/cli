@@ -1,0 +1,30 @@
+[build-system]
+requires = ["flit_scm>=1.7,<2", "setuptools_scm>=8,<10"]
+build-backend = "flit_scm:buildapi"
+
+[project]
+name = "pyweek"
+dynamic = ["version"]
+description = "CLI for Pyweek."
+readme = "README.md"
+requires-python = ">=3.6"
+authors = [{ name = "Daniel Pope", email = "mauve@mauveweb.co.uk" }]
+dependencies = [
+    "click",
+    "requests",
+    "progressbar2",
+    "packaging",
+    "colorama",
+]
+
+[project.urls]
+Homepage = "https://pyweek.org/"
+"Bug Tracker" = "https://github.com/pyweekorg/cli/issues"
+Documentation = "https://pyweek.readthedocs.io/en/latest/cli.html"
+"Source Code" = "https://github.com/pyweekorg/cli"
+
+[project.scripts]
+pyweek = "pyweek:cli"
+
+[tool.setuptools_scm]
+write_to = "pyweek/_version.py"
