@@ -27,6 +27,9 @@ PROGRESSBAR_WIDGETS = [
 ]
 
 sess = requests.Session()
+sess.headers['User-Agent'] = (
+    f'pyweek-cli/{__version__} (+https://github.com/pyweekorg/cli)'
+)
 
 
 def version_check():
