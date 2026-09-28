@@ -7,7 +7,7 @@ name = "pyweek"
 dynamic = ["version"]
 description = "CLI for Pyweek."
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.10"
 authors = [{ name = "Daniel Pope", email = "mauve@mauveweb.co.uk" }]
 dependencies = [
     "click",
