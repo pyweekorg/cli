@@ -14,7 +14,7 @@ import requests
 import click
 import progressbar
 
-__version__ = '0.5.3'
+from ._version import version as __version__
 PYWEEK_URL = 'https://pyweek.org'
 CLI_PYPI_URL = 'https://pypi.org/pypi/pyweek/json'
 
@@ -209,7 +209,7 @@ def verify(file: Path):
     {reason}""")
 
     if errors:
-        error(f"{errors} error{"s" if errors > 1 else ""} occurred while verifying file {file}.")
+        error(f"{errors} error{'s' if errors > 1 else ''} occurred while verifying file {file}.")
     else:
         click.echo(click.style(f"File {file} is valid.", fg='green'))
 

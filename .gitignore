@@ -104,3 +104,6 @@ venv.bak/
 .mypy_cache/
 
 venv
+
+# Generated from Git tags by flit_scm
+pyweek/_version.py
