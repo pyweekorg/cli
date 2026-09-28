@@ -9,7 +9,6 @@ permissions:
 
 jobs:
   build:
-    if: ${{ !github.event.release.prerelease }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -23,7 +22,7 @@ jobs:
       - name: Build and verify release version
         shell: bash
         run: |
-          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$ ]]
           uv build
           version=${GITHUB_REF_NAME#v}
           test -f "dist/pyweek-${version}.tar.gz"
